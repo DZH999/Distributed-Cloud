@@ -1,17 +1,17 @@
-# 分布式云盘系统
+# 文件服务器系统
 
-项目提供文件存储、同步、访问（上传、下载）等服务，解决了大容量存储和负载均衡的问题。项目在Linux系统上进行部署，并通过QT来呈现用户界面，完成各项功能。
-项目难点：
-- 基于C/S网络架构和QT搭建客户端，包含登入、注册、上传、下载、共享文件等功能；
-- 基于Nginx和FastCGI实现Web服务器，使用Nginx作为反向代理服务器，实现负载均衡；
-- 基于Fastdfs集群实现高性能、高可用文件上传、下载服务；
-- 基于Mysql和Redis存储数据。
+本项目分为两个模块：**客户端**和**文件服务器**。客户端采用Qt框架实现，提供了用户友好的操作界面，支持**用户注册、登入、文件上传**和**下载**等功能。客户端与文件服务器之间是通过Qt的Http进行通信。文件服务器使用Nginx作为**Web服务器**，并借助**FastCG**I来处理客户端发来的**动态请求数据**。为了**避免单点故障**和**应对业务增长**，本项目采用了**fastDFS集群**，实现了**纵向备份**和**横向扩容**功能。本文件服务系统不仅适用于企业内部文件管理，还可广泛应用于**医院**、**电商**、**短视频**等领域。
+项目亮点：
+- 客户端通过使用单例模式来存储文件列表界面频繁使用的登入信息，避免频繁的创建销毁对象；
+- 文件服务器系统端采用了Nginx和FastCGI 进程，实现了Web服务器动态请求数据的处理；
+- 利用Fastdfs集群实现高性能、高可用文件上传和下载服务，同时还具备动态扩容功能；
+- 使用Mysql数据库记录用户信息，并利用 Redis存储服务器频繁访问的数据。
 
 
 
 # 技术栈
 
-Linux、C++、QT、Nginx、Redis、Mysql、Fastdfs
+C++、Linux、Qt、Nginx、FastCGI、Fastdfs、Redis、Mysql
 
 # 系统框架
 
@@ -309,3 +309,91 @@ fastCGI与CGI的区别：CGI 就是所谓的短生存期应用程序，FastCGI �
 - 该项目使用的数据库是Mysql和Redis。所用的数据存储在Mysql中，但客户端访问服务器时，有一些数据，服务器需要频繁的查询数据。
   - 服务器第一次访问某些数据，先从Mysql中读出，并将数据写入Redis中；
   - 服务器第二次直接从redis中读数据。
+
+
+# 补充知识
+
+**单例模式**
+
+1、单例模式的优点：
+
+- 在内存中只有一个对象，节省内存空间；
+- 避免频繁的创建销毁对象，可以提高性能；
+- 避免对共享资源的多重占用；
+- 可以全局访问。
+
+2、单例模式的适用场景：
+
+- 需要频繁实例化然后销毁对象
+- 创建对象耗时过多或者耗资源过多，但又经常使用对象。
+- 有状态的工具类对象
+- 频繁访问数据库或文件的对象
+- 要求只有一个对象的场景
+
+3、如何保证单例模式对象只有一个？
+
+```c++
+ // 在类外部不允许进行new操作
+class Test
+ {
+ public:
+    // 1. 默认构造
+    // 2. 默认析构
+    // 3. 默认的拷贝构造
+// 1. 构造函数私有化
+// 2. 拷贝构造私有化
+}
+```
+
+4、单例模式实现方式？
+
+- 懒汉模式-- 单例对象在使用的时候被创建出来，线程安全问题需要考虑
+
+  ```c++
+  class Singleton {
+  private:
+      static Singleton* instance;
+      Singleton() {} // 构造函数私有化，防止外部创建对象
+  
+  public:
+      static Singleton* getInstance() {
+          if (instance == nullptr) {
+              instance = new Singleton();
+          }
+          return instance;
+      }
+  };
+  
+  Singleton* Singleton::instance = nullptr; // 静态成员变量初始化
+  
+  // 使用示例
+  Singleton* obj = Singleton::getInstance();
+  ```
+
+- 饿汉模式-- 单例对象在使用之前被创建出来
+
+```c++
+#include <iostream>
+
+class Singleton {
+private:
+    // 私有化构造函数和析构函数，防止外部创建和销毁对象
+    Singleton() {}
+    ~Singleton() {}
+public:
+    // 静态成员函数，返回类的唯一实例
+    static Singleton* getInstance() {
+        static Singleton instance; // 在静态函数中创建静态局部变量，保证对象只会被创建一次
+        return &instance;
+    }
+};
+// 使用示例
+int main() {
+    Singleton* obj1 = Singleton::getInstance();
+    Singleton* obj2 = Singleton::getInstance();
+    std::cout << "obj1 address: " << obj1 << std::endl;
+    std::cout << "obj2 address: " << obj2 << std::endl;
+    return 0;
+}
+```
+
